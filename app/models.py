@@ -1,20 +1,32 @@
-# app/models.py
 import sqlite3
 from app.database import DB_NAME
 
+
 class BaseModel:
     """
-    Base class for all models.
+    Base class for all models, providing connection and utility methods.
     """
     def __init__(self):
         self.connection = sqlite3.connect(DB_NAME)
         self.cursor = self.connection.cursor()
+
+    @staticmethod
+    def get_connection():
+        return sqlite3.connect(DB_NAME)
 
     def save(self):
         self.connection.commit()
 
     def close(self):
         self.connection.close()
+
+    def validate_fields(self, required_fields):
+        """
+        Validates that all required fields are non-empty.
+        """
+        if any(field is None or str(field).strip() == "" for field in required_fields):
+            raise ValueError("All required fields must be filled.")
+
 
 class User(BaseModel):
     def __init__(self, username, password_hash, email, role):
@@ -31,17 +43,23 @@ class User(BaseModel):
         """
         self.cursor.execute(query, (self.username, self.password_hash, self.email, self.role))
         self.save()
-    
+
     @staticmethod
     def find_by_username(username):
-        connection = sqlite3.connect(DB_NAME)
+        connection = BaseModel.get_connection()
         cursor = connection.cursor()
         query = "SELECT * FROM Users WHERE username = ?"
         cursor.execute(query, (username,))
         user = cursor.fetchone()
         connection.close()
         return user
-    
+
+    def update_password(self, new_password):
+        query = "UPDATE Users SET password_hash = ? WHERE username = ?"
+        self.cursor.execute(query, (new_password, self.username))
+        self.save()
+
+
 class Student(BaseModel):
     def __init__(self, user_id, first_name, last_name, date_of_birth, admission_date, major, status):
         super().__init__()
@@ -54,15 +72,17 @@ class Student(BaseModel):
         self.status = status
 
     def create(self):
+        self.validate_fields([self.first_name, self.last_name, self.date_of_birth, self.admission_date, self.major])
         query = """
         INSERT INTO Students (user_id, first_name, last_name, date_of_birth, admission_date, major, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """
         self.cursor.execute(query, (
             self.user_id, self.first_name, self.last_name, self.date_of_birth,
             self.admission_date, self.major, self.status
         ))
         self.save()
+
 
 class Instructor(BaseModel):
     def __init__(self, user_id, first_name, last_name, phone, hire_date):
@@ -74,6 +94,7 @@ class Instructor(BaseModel):
         self.hire_date = hire_date
 
     def create(self):
+        self.validate_fields([self.first_name, self.last_name, self.hire_date])
         query = """
         INSERT INTO Instructors (user_id, first_name, last_name, phone, hire_date)
         VALUES (?, ?, ?, ?, ?)
@@ -82,6 +103,7 @@ class Instructor(BaseModel):
             self.user_id, self.first_name, self.last_name, self.phone, self.hire_date
         ))
         self.save()
+
 
 class Course(BaseModel):
     def __init__(self, course_code, title, credits, max_enrollment, prerequisites, instructor_id, status):
@@ -95,6 +117,7 @@ class Course(BaseModel):
         self.status = status
 
     def create(self):
+        self.validate_fields([self.course_code, self.title, self.credits])
         query = """
         INSERT INTO Courses (course_code, title, credits, max_enrollment, prerequisites, instructor_id, status)
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -104,6 +127,7 @@ class Course(BaseModel):
             self.prerequisites, self.instructor_id, self.status
         ))
         self.save()
+
 
 class Enrollment(BaseModel):
     def __init__(self, year, semester, student_id, course_id, status):
@@ -115,6 +139,7 @@ class Enrollment(BaseModel):
         self.status = status
 
     def create(self):
+        self.validate_fields([self.year, self.semester, self.student_id, self.course_id, self.status])
         query = """
         INSERT INTO Enrollments (year, semester, student_id, course_id, status)
         VALUES (?, ?, ?, ?, ?)
@@ -123,6 +148,7 @@ class Enrollment(BaseModel):
             self.year, self.semester, self.student_id, self.course_id, self.status
         ))
         self.save()
+
 
 class Grade(BaseModel):
     def __init__(self, enrollment_id, grade_value, numeric_grade, submitted_by, comments):
@@ -134,6 +160,7 @@ class Grade(BaseModel):
         self.comments = comments
 
     def create(self):
+        self.validate_fields([self.enrollment_id, self.grade_value])
         query = """
         INSERT INTO Grades (enrollment_id, grade_value, numeric_grade, submitted_by, comments)
         VALUES (?, ?, ?, ?, ?)
