@@ -1,3 +1,5 @@
+# app/models.py
+
 import sqlite3
 from app.database import DB_NAME
 
@@ -119,7 +121,6 @@ class Student(BaseModel):
         ))
         self.save()
 
-
     @staticmethod
     def find_by_reg_no(reg_no):
         """
@@ -132,31 +133,6 @@ class Student(BaseModel):
         student = cursor.fetchone()
         connection.close()
         return student
-
-    def update(self, first_name=None, last_name=None, major=None, status=None):
-        """
-        Update student details in the database.
-        """
-        query = """
-        UPDATE Students
-        SET first_name = ?, last_name = ?, major = ?, status = ?
-        WHERE reg_no = ?
-        """
-        self.cursor.execute(query, (first_name, last_name, major, status, self.reg_no))
-        self.save()  
-
-    @staticmethod
-    def delete(reg_no):
-        """
-        Delete a student by registration number.
-        """
-        connection = BaseModel.get_connection()
-        cursor = connection.cursor()
-        query = "DELETE FROM Students WHERE reg_no = ?"
-        cursor.execute(query, (reg_no,))
-        connection.commit()  
-        connection.close()
-
     
     @staticmethod
     def find_all():
@@ -198,67 +174,209 @@ class Student(BaseModel):
 
 
 class Instructor(BaseModel):
-    def __init__(self, user_id, staff_no, first_name, last_name, phone, hire_date):
+    def __init__(self, user_id, staff_no, first_name, last_name, hire_date):
         super().__init__()
         self.user_id = user_id
         self.staff_no = staff_no
         self.first_name = first_name
         self.last_name = last_name
-        self.phone = phone
         self.hire_date = hire_date
 
     def create(self):
         self.validate_fields([self.staff_no, self.first_name, self.last_name, self.hire_date])
         query = """
-        INSERT INTO Instructors (user_id, staff_no, first_name, last_name, phone, hire_date)
+        INSERT INTO Instructors (user_id, staff_no, first_name, last_name, hire_date)
         VALUES (?, ?, ?, ?, ?)
         """
         self.cursor.execute(query, (
-            self.user_id, self.staff_no, self.first_name, self.last_name, self.phone, self.hire_date
+            self.user_id, self.staff_no, self.first_name, self.last_name, self.hire_date
         ))
         self.save()
+    
+    @staticmethod
+    def find_all():
+        connection = BaseModel.get_connection()
+        cursor = connection.cursor()
+        query = "SELECT instructor_id, first_name, last_name FROM Instructors"
+        cursor.execute(query)
+        instructors = cursor.fetchall()
+        connection.close()
+        return instructors
+    
+    @staticmethod
+    def get_name_by_id(instructor_id):
+        connection = BaseModel.get_connection()
+        cursor = connection.cursor()
+        query = "SELECT first_name, last_name FROM Instructors WHERE instructor_id = ?"
+        cursor.execute(query, (instructor_id,))
+        instructor = cursor.fetchone()
+        connection.close()
+        return f"{instructor[0]} {instructor[1]}" if instructor else "Unassigned"
+
+    @staticmethod
+    def get_course_count(instructor_id):
+        connection = BaseModel.get_connection()
+        cursor = connection.cursor()
+        query = "SELECT COUNT(*) FROM Courses WHERE instructor_id = ?"
+        cursor.execute(query, (instructor_id,))
+        count = cursor.fetchone()[0]
+        connection.close()
+        return count
+    
+    @staticmethod
+    def get_assigned_courses(instructor_id):
+        connection = BaseModel.get_connection()
+        cursor = connection.cursor()
+        query = """
+                SELECT course_id, course_code, title, credits, max_enrollment
+                FROM Courses
+                WHERE instructor_id = ?
+            """
+        cursor.execute(query, (instructor_id,))
+        courses = cursor.fetchall()
+        connection.close()
+        return courses
+    
+    @staticmethod
+    def view_course_statistics(instructor_id):
+        connection = BaseModel.get_connection()
+        cursor = connection.cursor()
+        query = """
+                SELECT c.course_code, c.course_name 
+                FROM Courses c
+                WHERE c.instructor_id = ?
+            """
+        cursor.execute(query, (instructor_id,))
+        courses = cursor.fetchall()
+        connection.close()
+        return courses
+
+
 
 
 class Course(BaseModel):
-    def __init__(self, course_code, title, credits, max_enrollment, prerequisites, instructor_id, status):
+    def __init__(self, course_code, title, credits, max_enrollment, instructor_id, status):
         super().__init__()
         self.course_code = course_code
         self.title = title
         self.credits = credits
         self.max_enrollment = max_enrollment
-        self.prerequisites = prerequisites
         self.instructor_id = instructor_id
         self.status = status
 
     def create(self):
         self.validate_fields([self.course_code, self.title, self.credits])
         query = """
-        INSERT INTO Courses (course_code, title, credits, max_enrollment, prerequisites, instructor_id, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO Courses (course_code, title, credits, max_enrollment, instructor_id, status)
+        VALUES (?, ?, ?, ?, ?, ?)
         """
         self.cursor.execute(query, (
             self.course_code, self.title, self.credits, self.max_enrollment,
-            self.prerequisites, self.instructor_id, self.status
+            self.instructor_id, self.status
         ))
         self.save()
     
     @staticmethod
-    def find_by_id(course_id):
+    def find_by_course_code(course_code):
         """
-        Retrieve a course by its ID.
+        Retrieve a course by course code.
         """
         connection = BaseModel.get_connection()
         cursor = connection.cursor()
-        query = "SELECT * FROM Courses WHERE course_id = ?"
-        cursor.execute(query, (course_id,))
+        query = "SELECT * FROM Courses WHERE course_code = ? AND status = 'active'"
+        cursor.execute(query, (course_code,))
         course = cursor.fetchone()
         connection.close()
         return course
+    
+    @staticmethod
+    def find_all():
+        """
+        Retrieves all courses from the database.
+        """
+        connection = BaseModel.get_connection()
+        cursor = connection.cursor()
+        query = """
+            SELECT c.course_code, c.title, c.credits, c.max_enrollment, 
+                i.staff_no, i.first_name || ' ' || i.last_name AS instructor_name
+            FROM Courses c
+            LEFT JOIN Instructors i ON c.instructor_id = i.instructor_id
+            WHERE c.status='active';
+        """
+        cursor.execute(query)
+        courses = cursor.fetchall()
+        connection.close()
+        return courses
+
+    def update(self, title=None, credits=None, max_enrollment=None, status=None):
+        """
+        Update course details.
+        """
+        query = """
+        UPDATE Courses
+        SET title = ?, credits = ?, max_enrollment = ?, status = ?
+        WHERE course_code = ?
+        """
+
+        self.cursor.execute(query, (title, credits, max_enrollment, status, self.course_code))
+        self.save()
+
+    @staticmethod
+    def delete(course_code):
+        """
+        Delete a course by course code
+        """
+        connection = BaseModel.get_connection()
+        cursor = connection.cursor()
+        query = "DELETE FROM Courses WHERE course_code = ?"
+        cursor.execute(query, (course_code,))
+        connection.commit()
+        connection.close()
+
+    @staticmethod
+    def assign_instructor(course_code, instructor_id):
+        connection = BaseModel.get_connection()
+        cursor = connection.cursor()
+        query = "UPDATE Courses SET instructor_id = ? WHERE course_code = ?"
+        cursor.execute(query, (instructor_id, course_code))
+        connection.commit()
+        connection.close()
+    
+    @staticmethod
+    def get_course_aggregates(course_code):
+        connection = BaseModel.get_connection()
+        cursor = connection.cursor()
+        query = """
+            SELECT AVG(ec.grade) as avg_grade, COUNT(ec.student_id) as total_students
+            FROM Enrollments ec
+            WHERE ec.course_code = ?
+            """
+        cursor.execute(query, (course_code))
+        aggregates = cursor.fetchone()
+        connection.close()
+        return aggregates
+
+    @staticmethod
+    def get_course_students(course_code):
+        connection = BaseModel.get_connection()
+        cursor = connection.cursor()
+        query = """
+            SELECT s.registration_number, s.first_name, s.last_name, ec.grade
+            FROM Students s
+            JOIN Enrollments ec ON s.id = ec.student_id
+            WHERE ec.course_code = ?
+            """
+        cursor.execute(query, (course_code))
+        students = cursor.fetchall()
+        connection.close()
+        return students   
 
 
 class Enrollment(BaseModel):
-    def __init__(self, year, semester, student_id, course_id, status):
+    def __init__(self, enrollment_id, year, semester, student_id, course_id, status):
         super().__init__()
+
+        self.enrollment_id = enrollment_id
         self.year = year
         self.semester = semester
         self.student_id = student_id
@@ -275,6 +393,41 @@ class Enrollment(BaseModel):
             self.year, self.semester, self.student_id, self.course_id, self.status
         ))
         self.save()
+
+
+    @staticmethod
+    def get_enrollment_statistics_for_all_courses():
+        connection = BaseModel.get_connection()
+        cursor = connection.cursor()
+        query = ("""
+            SELECT c.course_code, c.title, COUNT(e.student_id)
+            FROM Enrollments e
+            INNER JOIN Courses c ON e.course_id = c.course_id
+            WHERE c.status = 'active'
+            GROUP BY c.course_code, c.title
+        """)
+        cursor.execute(query)
+        courses_enrollment_stats = cursor.fetchall()
+        connection.close()
+        return courses_enrollment_stats
+
+
+    @staticmethod
+    def get_enrollment_statistics_for_course(course_code):
+        connection = BaseModel.get_connection()
+        cursor = connection.cursor()
+        query = ("""
+            SELECT c.course_code, c.title, COUNT(e.student_id)
+            FROM Enrollments e
+            INNER JOIN Courses c ON e.course_id = c.course_id
+            WHERE c.course_code = ? AND c.status = 'active'
+            GROUP BY c.course_code, c.title
+        """)
+        cursor.execute(query, (course_code,))
+        course_enrollment_stats = cursor.fetchall()
+        connection.close()
+        return course_enrollment_stats
+
 
 class Grade(BaseModel):
     def __init__(self, enrollment_id, grade_value=None, numeric_grade=None, submitted_by=None, comments=None):

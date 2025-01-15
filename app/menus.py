@@ -1,7 +1,7 @@
 # app/menus.py
 
 from app.services import SessionManager
-from app.services import AuthenticationService, StudentService, InstructorService, AdminService
+from app.services import AuthenticationService, StudentService, InstructorService, AdminService, CourseService
 
 
 def main_menu():
@@ -36,7 +36,7 @@ def main_menu():
         else:
             print("Registration failed.")
     elif choice == "4":
-        print("Goodbye!")
+        print("You've exited the program. Goodbye!")
         exit()
     else:
         print("Invalid choice. Please try again.")
@@ -63,8 +63,7 @@ def admin_menu():
         choice = input("Choose an option: ")
 
         if choice == "1":
-            # Keep the user in the Manage Students submenu until they choose to go back
-            manage_students_menu()
+            AdminService.manage_students()
         elif choice == "2":
             AdminService.manage_courses()
         elif choice == "3":
@@ -73,31 +72,6 @@ def admin_menu():
             print("Logging out...")
             SessionManager.logout_user()
             break
-        else:
-            print("Invalid choice. Please try again.")
-            
-def manage_students_menu():
-    while True:
-        print("\n--- Manage Students ---")
-        print("1. View All Students")
-        print("2. Add Student")
-        print("3. Update Student")
-        print("4. Delete Student")
-        print("5. Go Back")
-
-        choice = input("Choose an option: ")
-
-        if choice == "1":
-            StudentService.view_all_students()
-        elif choice == "2":
-            StudentService.add_student()
-        elif choice == "3":
-            StudentService.update_student()
-        elif choice == "4":
-            StudentService.delete_student()
-        elif choice == "5":
-            print("Returning to Admin Menu...")
-            break  # Exit the Manage Students submenu
         else:
             print("Invalid choice. Please try again.")
 
@@ -115,9 +89,9 @@ def instructor_menu():
         if choice == "1":
             InstructorService.view_assigned_courses()
         elif choice == "2":
-            InstructorService.manage_grades()
+            InstructorService.assign_grade()
         elif choice == "3":
-            InstructorService.view_course_statistics()
+            InstructorService.view_assigned_course_statistics()
         elif choice == "4":
             print("Logging out...")
             SessionManager.logout_user()

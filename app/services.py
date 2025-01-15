@@ -1,9 +1,8 @@
-from app.models import User, Student, Grade, Enrollment
-from app.utils import verify_password, hash_password
-from app.database import get_db_cursor
-from app.errors import SystemErrors
+# app/services.py
 
-# Decorator for role-based access control
+from app.models import User, Student, Grade, Enrollment, Course, Instructor
+from app.utils import verify_password, hash_password
+
 def role_required(required_role):
     if not SessionManager.is_authenticated():
         print("Access denied. User not authenticated.")
@@ -70,121 +69,149 @@ class SessionManager:
     @staticmethod
     def has_role(role):
         return SessionManager.current_user and SessionManager.current_user[4] == role
+    
+    @staticmethod
+    def get_logged_in_user_id():
+        if SessionManager.current_user:
+            return SessionManager.current_user[0]
+        return None
+
 
 class AdminService:
     @staticmethod
     def manage_students():
-        print("\n--- Manage Students ---")
-        print("1. Add Student\n2. Update Student\n3. Delete Student\n4. View Students")
-        choice = input("Choose an option: ")
+        """
+        Display and handle the 'Manage Students' menu.
+        Delegates actions to the appropriate methods in StudentService.
+        """
+        while True:
+            print("\n--- Manage Students ---")
+            print("1. View All Students")
+            print("2. Add Student")
+            print("3. Update Student")
+            print("4. Delete Student")
+            print("5. Go Back")
 
-        if choice == "1":
-            StudentService.add_student()
-        elif choice == "2":
-            StudentService.update_student()
-        elif choice == "3":
-            StudentService.delete_student()
-        elif choice == "4":
-            StudentService.view_all_students()
-        else:
-            print("Invalid choice.")
+            choice = input("Choose an option: ")
+
+            if choice == "1":
+                StudentService.view_all_students()
+            elif choice == "2":
+                StudentService.add_student()
+            elif choice == "3":
+                StudentService.update_student()
+            elif choice == "4":
+                StudentService.delete_student()
+            elif choice == "5":
+                print("Returning to Admin Menu...")
+                break
+            else:
+                print("Invalid choice. Please try again.")
 
     @staticmethod
-    def manage_reg_nos():
-        print("\n--- Manage reg_nos ---")
-        print("1. Add reg_no\n2. Update reg_no\n3. Delete reg_no\n4. View reg_nos")
-        choice = input("Choose an option: ")
+    def manage_courses():
+        """
+        Display and handle the 'Manage Courses' menu.
+        Delegates actions to the appropriate methods in CourseService.
+        """
+        while True:
+            print("\n--- Manage Courses ---")
+            print("1. View All Courses")
+            print("2. Add Course")
+            print("3. Update Course")
+            print("4. Delete Course")
+            print("5. Assign Instructor to Course")
+            print("6. Go Back")
 
-        if choice == "1":
-            reg_noService.add_reg_no()
-        elif choice == "2":
-            reg_noService.update_reg_no()
-        elif choice == "3":
-            reg_noService.delete_reg_no()
-        elif choice == "4":
-            reg_noService.view_all_reg_nos()
-        else:
-            print("Invalid choice.")
-    
+            choice = input("Choose an option: ").strip()
+
+            if choice == "1":
+                CourseService.view_all_courses()
+            elif choice == "2":
+                CourseService.add_course()
+            elif choice == "3":
+                CourseService.update_course()
+            elif choice == "4":
+                CourseService.delete_course()
+            elif choice == "5":
+                course_code = input("Enter Course Code: ").strip()
+                CourseService.assign_instructor_to_course(course_code)
+            elif choice == "6":
+                print("Returning to Admin Menu...")
+                break
+            else:
+                print("Invalid option. Please try again.")
+
     @staticmethod
     def view_reports():
-        print("\n--- View Reports ---")
-        print("1. View Student Transcripts")
-        print("2. View reg_no List")
-        print("3. View Enrollment Statistics")
-        print("4. Go Back")
+        """
+        Display and handle the 'View Reports' menu.
+        Delegates actions to the appropriate methods in AdminService or CourseService.
+        """
+        while True:
+            print("\n--- View Reports ---")
+            print("1. View Student Transcripts")
+            print("2. View Course List")
+            print("3. View Enrollment Statistics")
+            print("4. View Specific Course Enrollment Statistics")
+            print("5. Go Back")
 
-        choice = input("Choose an option: ")
+            choice = input("Choose an option: ").strip()
 
-        if choice == "1":
-            AdminService.view_student_transcripts()
-        elif choice == "2":
-            AdminService.view_reg_no_list()
-        elif choice == "3":
-            AdminService.view_enrollment_statistics()
-        elif choice == "4":
-            print("Returning to Admin Menu...")
-        else:
-            print("Invalid choice. Please try again.")
+            if choice == "1":
+                AdminService.view_student_transcripts()
+            elif choice == "2":
+                CourseService.view_all_courses()
+            elif choice == "3":
+                AdminService.get_all_courses_enrollment_statistics()
+            elif choice == "4":
+                AdminService.get_specific_course_enrollment_statistics()
+            elif choice == "5":
+                print("Returning to Admin Menu...")
+                break
+            else:
+                print("Invalid option. Please try again.")
+
+       
     
     @staticmethod
     def view_student_transcripts():
-        print("\n--- Student Transcripts ---")
-        reg_no = input("Enter Student Registration Number: ")
+       
+       print("Feature to implement: View student transcripts")
 
-        cursor = get_db_cursor()[0]
-        cursor.execute("""
-            SELECT reg_nos.title, Grades.grade_value, Grades.numeric_grade
-            FROM Grades
-            INNER JOIN Enrollments ON Grades.enrollment_id = Enrollments.enrollment_id
-            INNER JOIN reg_nos ON Enrollments.reg_no_id = reg_nos.reg_no_id
-            INNER JOIN Students ON Enrollments.student_id = Students.student_id
-            WHERE Students.reg_no = ?
-        """, (reg_no,))
-        transcript = cursor.fetchall()
-
-        if transcript:
-            print(f"\nTranscript for Student {reg_no}:")
-            for reg_no_title, grade_value, numeric_grade in transcript:
-                print(f"reg_no: {reg_no_title}, Grade: {grade_value}, Numeric Grade: {numeric_grade}")
-        else:
-            print("No transcript found for the given registration number.")
-    
-    @staticmethod
-    def view_reg_no_list():
-        print("\n--- reg_no List ---")
-
-        cursor = get_db_cursor()[0]
-        cursor.execute("SELECT reg_no_code, title FROM reg_nos WHERE status = 'active'")
-        reg_nos = cursor.fetchall()
-
-        if reg_nos:
-            print("\nActive reg_nos:")
-            for reg_no_code, title in reg_nos:
-                print(f"reg_no Code: {reg_no_code}, reg_no Title: {title}")
-        else:
-            print("No active reg_nos found.")
 
     @staticmethod
-    def view_enrollment_statistics():
-        print("\n--- Enrollment Statistics ---")
+    def get_all_courses_enrollment_statistics():
+        print("\n--- Enrollment Statistics for All Courses ---")
+        try:
+            stats = Enrollment.get_enrollment_statistics_for_all_courses()
 
-        cursor = get_db_cursor()[0]
-        cursor.execute("""
-            SELECT reg_nos.title, COUNT(Enrollments.student_id) 
-            FROM Enrollments
-            INNER JOIN reg_nos ON Enrollments.reg_no_id = reg_nos.reg_no_id
-            WHERE reg_nos.status = 'active'
-            GROUP BY reg_nos.title
-        """)
-        stats = cursor.fetchall()
+            if stats:
+                print(f"{'Course Code':<15} {'Course Title':<30} {'Enrolled Students':<20}")
+                print("-" * 65)  
+                for course_code, title, enrollment_count in stats:
+                    print(f"{course_code:<15} {title:<30} {enrollment_count:<20}")
+            else:
+                print("No enrollment statistics available for any courses.")
+        except Exception as e:
+            print(f"Error fetching statistics: {e}")
 
-        if stats:
-            print("\nEnrollment Statistics:")
-            for reg_no_title, enrollment_count in stats:
-                print(f"reg_no: {reg_no_title}, Enrolled Students: {enrollment_count}")
-        else:
-            print("No enrollment statistics available.")
+    @staticmethod
+    def get_specific_course_enrollment_statistics(course_code):
+        print(f"\n--- Enrollment Statistics for Course: {course_code} ---")
+        try:
+            stats = Enrollment.get_enrollment_statistics_for_course(course_code)
+
+            if stats:
+                print(f"{'Course Code':<15} {'Course Title':<30} {'Enrolled Students':<20}")
+                print("-" * 65)  
+                for course_code, title, enrollment_count in stats:
+                    print(f"{course_code:<15} {title:<30} {enrollment_count:<20}")
+            else:
+                print(f"No enrollment statistics available for course code: {course_code}")
+        except Exception as e:
+            print(f"Error fetching statistics for course {course_code}: {e}")
+
 
 
 
@@ -218,25 +245,30 @@ class StudentService:
         try:
             students = Student.find_all()
             if students:
+                print(f"{'Reg No':<20} {'Name':<30} {'Major':<20} {'Status':<15}")
+                print("-" * 85) 
                 for student in students:
-                    print(f"Reg No: {student[2]}, Name: {student[3]} {student[4]}, Major: {student[6]}, Status: {student[7]}")
+                    reg_no = student[2]
+                    name = f"{student[3]} {student[4]}"
+                    major = student[6]
+                    status = student[7]
+                    print(f"{reg_no:<20} {name:<30} {major:<20} {status:<15}")
             else:
                 print("No students found.")
         except Exception as e:
             print(f"Error: {e}")
+
 
     @staticmethod
     def update_student():
         print("\n--- Update Student Details ---")
         reg_no = input("Enter Registration Number: ")
 
-        # Retrieve the student by reg_no
         student_data = Student.find_by_reg_no(reg_no)
         if not student_data:
             print("Student not found.")
             return
 
-        # Unpack the student data
         student_id, user_id, reg_no, first_name, last_name, admission_date, major, status = student_data
 
         print("Leave field blank to keep current value.")
@@ -246,9 +278,8 @@ class StudentService:
         status = input(f"Status [{status}]: ") or status
 
         try:
-            # Create student instance
-            student_instance = Student(student_id, first_name, last_name, major, status)
-            # Call the update method on the student instance
+            student_instance = Student( user_id, reg_no, first_name, last_name, admission_date, major, status)
+
             student_instance.update(first_name, last_name, major, status)
             print("Student updated successfully.")
         except Exception as e:
@@ -261,214 +292,239 @@ class StudentService:
         reg_no = input("Enter Registration Number: ")
 
         try:
-            # Retrieve the student to check if it exists before deletion
             student_data = Student.find_by_reg_no(reg_no)
             if not student_data:
                 print("Student not found.")
                 return
             
-            # Proceed to delete the student by reg_no
             Student.delete(reg_no)
             print("Student deleted successfully.")
         except Exception as e:
             print(f"Error: {e}")
     
-class InstructorService:
     @staticmethod
-    def view_assigned_reg_nos():
-        if not SessionManager.is_authenticated():
-            print("Please log in to view assigned reg_nos.")
-            return
-        
-        instructor_id = SessionManager.current_user[0]  
-        
-        print(f"\n--- reg_nos Assigned to Instructor {instructor_id} ---")
-
-        cursor = get_db_cursor()[0]
-        cursor.execute("""
-            SELECT reg_nos.reg_no_code, reg_nos.title, reg_nos.credits, reg_nos.max_enrollment
-            FROM reg_nos
-            WHERE reg_nos.instructor_id = ?
-        """, (instructor_id,))
-        
-        reg_nos = cursor.fetchall()
-
-        if reg_nos:
-            print(f"\n{'reg_no Code':<20}{'Title':<40}{'Credits':<10}{'Max Enrollment':<20}")
-            print("-" * 90)
-            for reg_no in reg_nos:
-                reg_no_code, title, credits, max_enrollment = reg_no
-                print(f"{reg_no_code:<20}{title:<40}{credits:<10}{max_enrollment:<20}")
-        else:
-            print("No reg_nos assigned.")
-
-
+    def view_profile(reg_no):
+        print("Feature to implement: View student profile")
+    
     @staticmethod
-    def manage_grades(reg_no_id):
-        print("\n--- Manage Grades ---")
+    def course_registration(reg_no):
+        print("Feature to implement: enroll in courses")
+    
+    @staticmethod
+    def view_grades(reg_no):
+        print("Feature to implement: View personal grades")
+    
+    @staticmethod
+    def generate_transcript(reg_no):
+        print("Feature to implement: generate student transcript")
+
+class CourseService:
+    @staticmethod
+    def add_course():
+        print("\n--- Add New Course ---")
+        course_code = input("Course Code: ")
+        title = input("Course Title: ")
+        credits = input("Credits: ")
+        max_enrollment = input("Max Enrollment: ")
+        status = input("Status (active/inactive): ").lower() or "active"
+
         try:
-            cursor = get_db_cursor()
-            cursor.execute("""
-                SELECT student_id, first_name, last_name, grade
-                FROM Enrollments
-                INNER JOIN Students ON Enrollments.student_id = Students.student_id
-                WHERE reg_no_id = ?
-            """, (reg_no_id,))
-            students = cursor.fetchall()
+            # Create the course without assigning an instructor
+            course = Course(course_code, title, credits, max_enrollment, None, status)
+            course.create()
+            print("Course added successfully.")
 
-            if not students:
-                print("No students enrolled in this reg_no.")
-                return
-
-            for student in students:
-                print(f"Student ID: {student[0]}, Name: {student[1]} {student[2]}, Current Grade: {student[3] or 'N/A'}")
-                grade = input("Enter grade (or leave blank to skip): ")
-
-                if grade and grade not in GRADE_POINTS:
-                    print(SystemErrors.INVALID_GRADE['message'])
-                    continue
-
-                if grade:
-                    cursor.execute("""
-                        UPDATE Enrollments SET grade = ? WHERE student_id = ? AND reg_no_id = ?
-                    """, (grade, student[0], reg_no_id))
-                    print("Grade updated successfully.")
+            CourseService.assign_instructor_to_course(course_code)
 
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"Error adding course: {e}")
 
     @staticmethod
-    def view_reg_no_statistics(reg_no_id):
-        print("\n--- reg_no Statistics ---")
+    def view_all_courses():
         try:
-            cursor = get_db_cursor()
-            cursor.execute("""
-                SELECT grade, COUNT(*)
-                FROM Enrollments
-                WHERE reg_no_id = ? AND grade IS NOT NULL
-                GROUP BY grade
-            """, (reg_no_id,))
-            stats = cursor.fetchall()
-
-            if stats:
-                print("Grade Distribution:")
-                for grade, count in stats:
-                    print(f"Grade: {grade}, Count: {count}")
+            courses = Course.find_all()
+            if courses:
+                print("\n--- All Courses ---")
+                print(f"{'Course Code':<15} {'Title':<30} {'Credits':<10} {'Max Enrollment':<15} {'Instructor Name':<30}")
+                print("-" * 100)  
+                
+                for course in courses:
+                    course_code = course[0]
+                    title = course[1]
+                    credits = str(course[2])
+                    max_enrollment = str(course[3])
+                    instructor = course[4] if course[4] else "No instructor assigned"
+                    print(f"{course_code:<15} {title:<30} {credits:<10} {max_enrollment:<15} {instructor:<30}")
             else:
-                print("No grades assigned yet.")
+                print("No courses found.")
+        except Exception as e:
+            print(f"Error retrieving courses: {e}")
+
+    @staticmethod
+    def update_course():
+        print("\n--- Update Course Details ---")
+        course_code = input("Enter Course Code: ")
+
+        course_data = Course.find_by_course_code(course_code)
+        if not course_data:
+            print("Course not found.")
+            return
+
+        course_id, course_code, title, credits, max_enrollment, instructor_id, status = course_data
+
+        print("Leave field blank to keep current value.")
+        title = input(f"Title [{title}]: ") or title
+        credits = input(f"Credits [{credits}]: ") or credits
+        max_enrollment = input(f"Max Enrollment [{max_enrollment}]: ") or max_enrollment
+        status = input(f"Status [{status}]: ") or status
+
+        try:
+            course_instance = Course(course_code, title, credits, max_enrollment, instructor_id, status)
+            course_instance.update(title=title, credits=credits, max_enrollment=max_enrollment, status=status)
+            print("Course updated successfully.")
+        except Exception as e:
+            print(f"Error updating course: {e}")
+    
+    @staticmethod
+    def delete_course():
+        print("\n--- Delete Course ---")
+        course_code = input("Enter Course Code: ")
+
+        try:
+            course_data = Course.find_by_course_code(course_code)
+            if not course_data:
+                print("Course not found.")
+                return
+            
+            Course.delete(course_code)
+            print("Course deleted successfully.")
         except Exception as e:
             print(f"Error: {e}")
+    
+    @staticmethod
+    def assign_instructor_to_course(course_code):
+        print(f"\n--- Assign Instructor to Course: {course_code} ---")
+        instructors = Instructor.find_all()  
 
-GRADE_POINTS = {
-    'A+': {'points': 5.0, 'range': '80-100', 'class': 'First Class'},
-    'A':  {'points': 4.75, 'range': '75-79', 'class': 'First Class'},
-    'A-': {'points': 4.5, 'range': '70-74', 'class': 'First Class'},
-    'B+': {'points': 4.0, 'range': '65-69', 'class': 'Upper Second'},
-    'B':  {'points': 3.75, 'range': '63-64', 'class': 'Upper Second'},
-    'B-': {'points': 3.5, 'range': '60-62', 'class': 'Upper Second'},
-    'C+': {'points': 3.0, 'range': '55-59', 'class': 'Lower Second'},
-    'C':  {'points': 2.75, 'range': '53-54', 'class': 'Lower Second'},
-    'C-': {'points': 2.5, 'range': '50-52', 'class': 'Lower Second'},
-    'D+': {'points': 2.0, 'range': '45-49', 'class': 'Third'},
-    'D':  {'points': 1.5, 'range': '43-44', 'class': 'Third'},
-    'D-': {'points': 1.0, 'range': '40-42', 'class': 'Third'},
-    'F':  {'points': 0.0, 'range': '0-39', 'class': 'Fail'}
-}
+        if not instructors:
+            print("No instructors found.")
+            choice = input("Would you like to add a new instructor? (yes/no): ").strip().lower()
+            if choice == 'yes':
+                    InstructorService.add_instructor()
+                    CourseService.assign_instructor_to_course(course_code)
+            return
+
+
+        print("\nAvailable Instructors:")
+        for idx, instructor in enumerate(instructors, start=1):
+            instructor_id, first_name, last_name = instructor[:3]
+            assigned_courses = Instructor.get_course_count(instructor_id) 
+            print(f"{idx}. {first_name} {last_name} (Courses Assigned: {assigned_courses})")
+
+
+        try:
+            selection = int(input("Select an instructor by number: "))
+            if 1 <= selection <= len(instructors):
+                instructor_id = instructors[selection - 1][0]
+
+                Course.assign_instructor(course_code, instructor_id)
+                print(f"Instructor assigned successfully to course {course_code}.")
+            else:
+                print("Invalid selection. Try again.")
+                CourseService.assign_instructor_to_course(course_code) 
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+            CourseService.assign_instructor_to_course(course_code)  
+
+
+    @staticmethod
+    def assign_instructor_to_new_course():
+        print("\n--- Assign Instructor to a Course ---")
+        courses = Course.find_all()
+
+        if not courses:
+            print("No courses found.")
+            return
+
+        print("\nAvailable Courses:")
+        for idx, course in enumerate(courses, start=1):
+            print(f"{idx}. {course[1]} ({course[2]})")
+
+        try:
+            selection = int(input("Select a course by number: "))
+            if 1 <= selection <= len(courses):
+                course_code = courses[selection - 1][1]
+                instructor_id = input("Enter Instructor ID: ")
+                Course.assign_instructor(course_code, instructor_id)
+                print(f"Instructor assigned to course {course_code}.")
+            else:
+                print("Invalid selection. Try again.")
+                CourseService.assign_instructor_to_new_course()
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+            CourseService.assign_instructor_to_new_course()
 
 
 
 class InstructorService:
     @staticmethod
-    def view_assigned_reg_nos(instructor_id):
-        """
-        Fetches all reg_nos assigned to the instructor.
-        """
+    def add_instructor():
+        print("\n--- Register New Instructor ---")
+
         try:
-            query = """
-            SELECT reg_nos.id, reg_nos.name, reg_nos.code
-            FROM reg_nos
-            INNER JOIN reg_noAssignments ON reg_nos.id = reg_noAssignments.reg_no_id
-            WHERE reg_noAssignments.instructor_id = ?
-            """
-            cursor = get_db_cursor()
-            cursor.execute(query, (instructor_id,))
-            reg_nos = cursor.fetchall()
+            username = input("Username: ")
+            password = input("Password: ")
+            user = User(username, hash_password(password), "instructor")
+            user.create()
 
-            if not reg_nos:
-                print("No reg_nos assigned.")
-                return []
-
-            print("\n--- Assigned reg_nos ---")
-            for reg_no in reg_nos:
-                print(f"reg_no ID: {reg_no[0]}, Name: {reg_no[1]}, Code: {reg_no[2]}")
-
-            return reg_nos
+            user_id = user.cursor.lastrowid
+            staff_no = input("Staff Number: ")
+            first_name = input("First Name: ")
+            last_name = input("Last Name: ")
+            hire_date = input("Hire Date (YYYY-MM-DD): ")
+        
+            instructor = Instructor(user_id, staff_no, first_name, last_name, hire_date)
+            instructor.create()
+            print("Instructor added successfully.")
         except Exception as e:
-            print(f"Error: {e}")
-            return []
+            print(f"Error adding instructor: {e}")
+    
+    @staticmethod
+    def view_assigned_courses():
+        try:
+            courses = Instructor.get_assigned_courses(SessionManager.get_logged_in_user_id())
+            if courses:
+                print("\n--- Assigned Courses ---")
+                print(f"{'Course Code':<15} {'Title':<30} {'Credits':<10} {'Max Enrollment':<15}")
+                print("-" * 80)  
+                
+                for course in courses:
+                    course_code = course[1]
+                    title = course[2]
+                    credits = str(course[3])
+                    max_enrollment = str(course[4])
+                    print(f"{course_code:<15} {title:<30} {credits:<10} {max_enrollment:<15}")
+            else:
+                print("No courses found.")
+        except Exception as e:
+            print(f"Error retrieving courses: {e}")
 
     @staticmethod
     def assign_grade(student_id, reg_no_id, numeric_grade, submitted_by, comments=None):
         """
         Assigns a grade to a student for a specific reg_no.
         """
-        try:
-            # Find the enrollment ID for the student and reg_no
-            enrollment_id_query = """
-            SELECT id FROM Enrollments WHERE student_id = ? AND reg_no_id = ?
-            """
-            cursor = get_db_cursor()
-            cursor.execute(enrollment_id_query, (student_id, reg_no_id))
-            enrollment = cursor.fetchone()
-
-            if not enrollment:
-                raise ValueError(SystemErrors.DUPLICATE_ENROLLMENT['message'])
-
-            # Create and save the grade
-            grade = Grade(enrollment_id=enrollment[0], numeric_grade=numeric_grade, submitted_by=submitted_by, comments=comments)
-            grade.create()
-            print(f"Grade {grade.grade_value} assigned to student {student_id}.")
-        except Exception as e:
-            print(f"Error: {e}")
+       
+        print("Feature to implement: Update the grade for the student")
 
     @staticmethod
-    def view_reg_no_statistics(reg_no_id):
+    def view_assigned_course_statistics():
         """
-        Displays statistics for a specific reg_no, such as average grade and grade distribution.
+        Displays statistics for a course, such as average grade and grade distribution and the students enrolled.
         """
-        try:
-            cursor = get_db_cursor()
 
-            # Average grade for the reg_no
-            cursor.execute("""
-                SELECT AVG(numeric_grade)
-                FROM Grades
-                INNER JOIN Enrollments ON Grades.enrollment_id = Enrollments.id
-                WHERE Enrollments.reg_no_id = ?
-            """, (reg_no_id,))
-            avg_grade = cursor.fetchone()[0]
-
-            # Grade distribution for the reg_no
-            cursor.execute("""
-                SELECT Grades.grade_value, COUNT(*)
-                FROM Grades
-                INNER JOIN Enrollments ON Grades.enrollment_id = Enrollments.id
-                WHERE Enrollments.reg_no_id = ?
-                GROUP BY Grades.grade_value
-                ORDER BY Grades.grade_value DESC
-            """, (reg_no_id,))
-            grade_distribution = cursor.fetchall()
-
-            # Print the reg_no statistics
-            print("\n--- reg_no Statistics ---")
-            print(f"reg_no ID: {reg_no_id}")
-            print(f"Average Grade: {avg_grade:.2f}" if avg_grade is not None else "No grades available for this reg_no.")
-
-            print("\nGrade Distribution:")
-            for grade, count in grade_distribution:
-                print(f"Grade: {grade}, Count: {count}")
-        except Exception as e:
-            print(f"Error: {e}")
+        print("Feature to implement: View statistics for a specific course")
+        
 
 class ReportingService:
     @staticmethod
@@ -476,74 +532,13 @@ class ReportingService:
         """
         Generates a report showing the GPA and honours classification for a student.
         """
-        print("\n--- Student GPA Report ---")
-        try:
-            # Calculate GPA
-            gpa = Grade.calculate_gpa(student_id)
-            if gpa == 0.0:
-                raise ValueError(f"No grades found for student {student_id}.")
 
-            # Get honours classification
-            classification = Grade.classify_honours(gpa)
-
-            print(f"Student ID: {student_id}")
-            print(f"GPA: {gpa:.2f}")
-            print(f"Honours Classification: {classification}")
-        except ValueError as e:
-            print(f"Error: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+        print("Feature to implement: Generate student GPA report")
 
     @staticmethod
     def reg_no_statistics_report(reg_no_id):
         """
         Generates a report showing the average grade and grade distribution for a reg_no.
         """
-        print("\n--- reg_no Statistics ---")
-        try:
-            cursor = get_db_cursor()
-
-            # Average grade for the reg_no
-            cursor.execute("""
-                SELECT AVG(numeric_grade)
-                FROM Grades
-                INNER JOIN Enrollments ON Grades.enrollment_id = Enrollments.id
-                WHERE Enrollments.reg_no_id = ?
-            """, (reg_no_id,))
-            avg_grade = cursor.fetchone()[0]
-
-            # Handle case when no grades exist
-            if avg_grade is None:
-                raise ValueError(SystemErrors.reg_no_NOT_FOUND['message'])
-
-            # Grade distribution for the reg_no
-            cursor.execute("""
-                SELECT Grades.grade_value, COUNT(*)
-                FROM Grades
-                INNER JOIN Enrollments ON Grades.enrollment_id = Enrollments.id
-                WHERE Enrollments.reg_no_id = ?
-                GROUP BY Grades.grade_value
-                ORDER BY Grades.grade_value DESC
-            """, (reg_no_id,))
-            grade_distribution = cursor.fetchall()
-
-            # Total number of students graded
-            cursor.execute("""
-                SELECT COUNT(*)
-                FROM Enrollments
-                WHERE reg_no_id = ?
-            """, (reg_no_id,))
-            total_students = cursor.fetchone()[0]
-
-            # Print reg_no statistics
-            print(f"reg_no ID: {reg_no_id}")
-            print(f"Average Grade: {avg_grade:.2f}")
-            print(f"Total Students Graded: {total_students}\n")
-            print("Grade Distribution:")
-            for grade, count in grade_distribution:
-                print(f"  Grade {grade}: {count} student(s)")
-
-        except ValueError as e:
-            print(f"Error: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+        
+        print("Feature to implement: Generate reg_no statistics report")
