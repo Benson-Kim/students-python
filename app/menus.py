@@ -8,7 +8,8 @@ def main_menu():
     print("\n--- Main Menu ---")
     print("1. Login")
     print("2. Reset Password")
-    print("3. Exit")
+    print("3. Register")
+    print("4. Exit")
 
     choice = input("Choose an option: ")
 
@@ -18,10 +19,23 @@ def main_menu():
         user = AuthenticationService.login(username, password)
         if user:
             SessionManager.login_user(user)
-            role_based_menu(user[4])
+            role_based_menu(user[3])
     elif choice == "2":
         AuthenticationService.reset_password()
     elif choice == "3":
+        username = input("Enter username: ")
+        password = input("Enter password: ")
+        role = input("Enter role (default: student): ") or "student"
+        success = AuthenticationService.register_user(username, password, role)
+        if success:
+            print("Registration successful. You're being redirected to the menu page.")
+            user = AuthenticationService.login(username, password)
+            if user:
+                SessionManager.login_user(user)
+                role_based_menu(user[3])
+        else:
+            print("Registration failed.")
+    elif choice == "4":
         print("Goodbye!")
         exit()
     else:
@@ -49,7 +63,8 @@ def admin_menu():
         choice = input("Choose an option: ")
 
         if choice == "1":
-            AdminService.manage_students()
+            # Keep the user in the Manage Students submenu until they choose to go back
+            manage_students_menu()
         elif choice == "2":
             AdminService.manage_courses()
         elif choice == "3":
@@ -60,6 +75,32 @@ def admin_menu():
             break
         else:
             print("Invalid choice. Please try again.")
+            
+def manage_students_menu():
+    while True:
+        print("\n--- Manage Students ---")
+        print("1. View All Students")
+        print("2. Add Student")
+        print("3. Update Student")
+        print("4. Delete Student")
+        print("5. Go Back")
+
+        choice = input("Choose an option: ")
+
+        if choice == "1":
+            StudentService.view_all_students()
+        elif choice == "2":
+            StudentService.add_student()
+        elif choice == "3":
+            StudentService.update_student()
+        elif choice == "4":
+            StudentService.delete_student()
+        elif choice == "5":
+            print("Returning to Admin Menu...")
+            break  # Exit the Manage Students submenu
+        else:
+            print("Invalid choice. Please try again.")
+
 
 def instructor_menu():
     while True:
@@ -83,6 +124,7 @@ def instructor_menu():
             break
         else:
             print("Invalid choice. Please try again.")
+
 
 def student_menu():
     while True:

@@ -11,7 +11,6 @@ class TestUserService(unittest.TestCase):
         user_data = {
             "username": "testuser",
             "password": "securepassword123",
-            "email": "testuser@example.com",
             "role": "student"
         }
         result = self.user_service.register_user(user_data)
@@ -21,7 +20,6 @@ class TestUserService(unittest.TestCase):
         self.user_service.register_user({
             "username": "testuser",
             "password": "securepassword123",
-            "email": "testuser@example.com",
             "role": "student"
         })
         session = self.user_service.login("testuser", "securepassword123")
