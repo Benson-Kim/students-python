@@ -5,7 +5,6 @@ CREATE TABLE Users (
     password_hash TEXT NOT NULL,
     role TEXT CHECK(role IN ('admin', 'instructor', 'student')) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_login TIMESTAMP,
     is_active BOOLEAN DEFAULT 1
 );
 
@@ -29,7 +28,6 @@ CREATE TABLE Instructors (
     staff_no TEXT UNIQUE NOT NULL,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
-    phone TEXT,
     hire_date DATE NOT NULL,
     FOREIGN KEY (user_id) REFERENCES Users(user_id)
 );
@@ -41,8 +39,7 @@ CREATE TABLE Courses (
     title TEXT NOT NULL,
     credits INTEGER NOT NULL,
     max_enrollment INTEGER NOT NULL,
-    prerequisites TEXT,
-    instructor_id INTEGER NOT NULL,
+    instructor_id INTEGER,
     status TEXT CHECK(status IN ('active', 'inactive', 'archived')) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (instructor_id) REFERENCES Instructors(instructor_id)
