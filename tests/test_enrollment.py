@@ -16,7 +16,6 @@ class TestEnrollmentWorkflow(unittest.TestCase):
             "first_name": "John",
             "last_name": "Doe",
             "date_of_birth": "2000-01-01",
-            "phone": "1234567890",
             "admission_date": "2023-01-01",
             "major": "CS",
             "status": "active"
@@ -40,7 +39,6 @@ class TestEnrollmentWorkflow(unittest.TestCase):
             "title": "Data Structures",
             "credits": 3,
             "max_enrollment": 30,
-            "prerequisites": "CS101",
             "instructor_id": 1,
             "status": "active"
         })
